@@ -1,0 +1,6 @@
+package net.salesianos.common;
+
+public enum MessageType {
+    JOIN, JOINED_OK,WAITING_PLAYERS, START_ROUND, STOP_CALLED, SUBMIT_ANSWERS, ROUND_RESULT,
+    GAME_OVER, INFO, ERROR, DISCONNECT
+}
