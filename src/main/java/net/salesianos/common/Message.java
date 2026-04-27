@@ -5,25 +5,25 @@ public class Message implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private final MessageType type;
-    private final String remitente;
+    private final String sender;
     private final Object payload;
 
-    public Message(MessageType type, String remitente, Object payload) {
+    public Message(MessageType type, String sender, Object payload) {
         this.type      = type;
-        this.remitente = remitente;
+        this.sender = sender;
         this.payload   = payload;
     }
 
-    public Message(MessageType type, String remitente) {
-        this(type, remitente, null);
+    public Message(MessageType type, String sender) {
+        this(type, sender, null);
     }
 
-    public MessageType getTipo() {
+    public MessageType getType() {
         return type;
     }
 
-    public String getRemitente() {
-        return remitente;
+    public String getSender() {
+        return sender;
     }
 
     public Object getPayload() {
@@ -37,7 +37,7 @@ public class Message implements Serializable {
     @Override
     public String toString() {
         return "Message{type=" + type
-                + ", remitente='" + remitente + '\''
+                + ", remitente='" + sender + '\''
                 + ", payload=" + payload + '}';
     }
 }
