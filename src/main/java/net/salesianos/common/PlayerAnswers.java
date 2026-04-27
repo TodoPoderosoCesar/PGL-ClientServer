@@ -8,10 +8,10 @@ import java.util.Map;
 public class PlayerAnswers implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private final String jugador;
-    private final char letra;
-    private final Map<String, String> respuestas;
-    public static final String[] CATEGORIAS = {
+    private final String player;
+    private final char letter;
+    private final Map<String, String> answers;
+    public static final String[] CATEGORIES = {
             "Nombre",
             "Animal",
             "Color",
@@ -19,43 +19,43 @@ public class PlayerAnswers implements Serializable {
             "Cosa"
     };
 
-    public PlayerAnswers(String jugador, char letra) {
-        this.jugador    = jugador;
-        this.letra      = letra;
-        this.respuestas = new LinkedHashMap<>();
-        for (String categoria : CATEGORIAS) {
-            respuestas.put(categoria, "");
+    public PlayerAnswers(String player, char letter) {
+        this.player    = player;
+        this.letter = letter;
+        this.answers = new LinkedHashMap<>();
+        for (String category : CATEGORIES) {
+            answers.put(category, "");
         }
     }
 
-    public void setRespuesta(String categoria, String respuesta) {
-        if (respuestas.containsKey(categoria)) {
-            respuestas.put(categoria, respuesta == null ? "" : respuesta.trim());
+    public void setAnswer(String category, String answer) {
+        if (answers.containsKey(category)) {
+            answers.put(category, answer == null ? "" : answer.trim());
         }
     }
 
-    public String getRespuesta(String categoria) {
-        return respuestas.getOrDefault(categoria, "");
+    public String getAnswer(String category) {
+        return answers.getOrDefault(category, "");
     }
 
-    public Map<String, String> getRespuestas() {
-        return Collections.unmodifiableMap(respuestas);
+    public Map<String, String> getAnswers() {
+        return Collections.unmodifiableMap(answers);
     }
 
-    public String getJugador() {
-        return jugador;
+    public String getPlayer() {
+        return player;
     }
 
-    public char getLetra() {
-        return letra;
+    public char getLetter() {
+        return letter;
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Respuestas de ").append(jugador)
-                .append(" (letra '").append(letra).append("'):\n");
-        respuestas.forEach((cat, resp) ->
+        sb.append("Respuestas de ").append(player)
+                .append(" (letra '").append(letter).append("'):\n");
+        answers.forEach((cat, resp) ->
                 sb.append("  ").append(cat).append(": ")
                         .append(resp.isEmpty() ? "(en blanco)" : resp)
                         .append('\n'));
