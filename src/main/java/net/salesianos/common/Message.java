@@ -4,26 +4,22 @@ import java.io.Serializable;
 public class Message implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private final MessageType tipo;
+    private final MessageType type;
     private final String remitente;
     private final Object payload;
 
-    // ----------------------------------------------------------------
-    // Constructores
-    // ----------------------------------------------------------------
-
-    public Message(MessageType tipo, String remitente, Object payload) {
-        this.tipo      = tipo;
+    public Message(MessageType type, String remitente, Object payload) {
+        this.type      = type;
         this.remitente = remitente;
         this.payload   = payload;
     }
 
-    public Message(MessageType tipo, String remitente) {
-        this(tipo, remitente, null);
+    public Message(MessageType type, String remitente) {
+        this(type, remitente, null);
     }
 
     public MessageType getTipo() {
-        return tipo;
+        return type;
     }
 
     public String getRemitente() {
@@ -40,7 +36,7 @@ public class Message implements Serializable {
 
     @Override
     public String toString() {
-        return "Message{tipo=" + tipo
+        return "Message{type=" + type
                 + ", remitente='" + remitente + '\''
                 + ", payload=" + payload + '}';
     }
