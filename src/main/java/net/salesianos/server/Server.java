@@ -31,7 +31,7 @@ public class Server {
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             LOG.info("Server STOP Online escuchando en el puerto " + port);
-            LOG.info("Esperando jugadores (mínimo " + GameRoom.MIN_JUGADORES + ")...");
+            LOG.info("Esperando jugadores (mínimo " + GameRoom.MIN_PLAYERS + ")...");
 
             while (!serverSocket.isClosed()) {
                 try {
