@@ -5,39 +5,39 @@ import java.io.Serializable;
 public class PlayerScore implements Serializable, Comparable<PlayerScore> {
 
     private static final long serialVersionUID = 1L;
-    private final String nombre;
-    private int puntuacion;
+    private final String name;
+    private int score;
 
-    public PlayerScore(String nombre) {
-        this.nombre     = nombre;
-        this.puntuacion = 0;
+    public PlayerScore(String name) {
+        this.name = name;
+        this.score = 0;
     }
 
-    public String getNombre() {
-        return nombre;
+    public String getName() {
+        return name;
     }
 
-    public int getPuntuacion() {
-        return puntuacion;
+    public int getScore() {
+        return score;
     }
 
-    public void sumarPuntos(int puntos) {
-        this.puntuacion += puntos;
+    public void sumScore(int score) {
+        this.score += score;
     }
 
-    public void setPuntuacion(int puntuacion) {
-        this.puntuacion = puntuacion;
+    public void setScore(int score) {
+        this.score = score;
     }
 
     @Override
-    public int compareTo(PlayerScore otro) {
-        int cmp = Integer.compare(otro.puntuacion, this.puntuacion);
+    public int compareTo(PlayerScore other) {
+        int cmp = Integer.compare(other.score, this.score);
         if (cmp != 0) return cmp;
-        return this.nombre.compareToIgnoreCase(otro.nombre);
+        return this.name.compareToIgnoreCase(other.name);
     }
 
     @Override
     public String toString() {
-        return nombre + ": " + puntuacion + " pts";
+        return name + ": " + score + " pts";
     }
 }
