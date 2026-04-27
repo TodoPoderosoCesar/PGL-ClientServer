@@ -104,7 +104,7 @@ public class GameRoom {
         LOG.info("Evaluando ronda " + gameRound);
 
         for (PlayerAnswers pa : roundAnswers) {
-            int score = GameValidator.calcularPuntosTotales(pa, roundAnswers);
+            int score = GameValidator.calculateTotalScore(pa, roundAnswers);
             searchScore(pa.getPlayer()).sumScore(score);
         }
 
