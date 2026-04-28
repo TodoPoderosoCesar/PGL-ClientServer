@@ -1,7 +1,5 @@
-package net.salesianos.server;
+package net.salesianos.client;
 
-import net.salesianos.client.Client;
-import net.salesianos.client.GameUI;
 import net.salesianos.common.Message;
 import net.salesianos.common.MessageType;
 import net.salesianos.common.PlayerScore;
