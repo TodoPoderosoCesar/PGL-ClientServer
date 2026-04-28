@@ -3,6 +3,7 @@ package net.salesianos.client;
 import net.salesianos.common.Message;
 import net.salesianos.common.MessageType;
 import net.salesianos.common.PlayerAnswers;
+import net.salesianos.server.ServerListener;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
