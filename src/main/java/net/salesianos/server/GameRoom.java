@@ -16,7 +16,7 @@ public class GameRoom {
 
     private static final Logger LOG = Logger.getLogger(GameRoom.class.getName());
     public static final int MIN_PLAYERS = 2;
-    public static final int TOTAL_ROUNDS = 3;
+    public static final int TOTAL_ROUNDS = 1;
     private static final char[] LETTERS = "ABCDEFGHIJKLMNOPRSTUVZ".toCharArray();
 
     private final CopyOnWriteArrayList<ClientHandler> handlers = new CopyOnWriteArrayList<>();
@@ -116,7 +116,7 @@ public class GameRoom {
         if (gameRound >= TOTAL_ROUNDS) {
             endGame();
         } else {
-            state = Phase.WAITING_READY; // 🔥 CLAVE
+            state = Phase.WAITING_READY;
             readyPlayers = 0;
             LOG.info("Esperando confirmación de jugadores...");
         }
