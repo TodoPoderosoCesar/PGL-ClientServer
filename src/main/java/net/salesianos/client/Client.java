@@ -4,11 +4,16 @@ import net.salesianos.common.Message;
 import net.salesianos.common.MessageType;
 import net.salesianos.common.PlayerAnswers;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,16 +26,19 @@ public class Client {
     private volatile boolean connected = false;
     private volatile boolean stopCalled = false;
     private volatile char gameLetter;
+    private volatile boolean roundResultReceived = false;
 
-    private Socket             socket;
+    private Socket socket;
     private ObjectOutputStream output;
     private ObjectInputStream input;
 
     private String playerName;
 
+    private final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
+
     public static void main(String[] args) {
-        String host   = args.length > 0 ? args[0] : DEFAULT_HOST;
-        int    port = DEFAULT_PORT;
+        String host = args.length > 0 ? args[0] : DEFAULT_HOST;
+        int port = DEFAULT_PORT;
 
         if (args.length > 1) {
             try {
@@ -46,6 +54,21 @@ public class Client {
     public void start(String host, int port) {
         GameUI.printWelcome();
 
+        // Hilo único que lee stdin y mete líneas en la cola.
+        // Es daemon para que no impida que la JVM cierre.
+        Thread stdinReader = new Thread(() -> {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    inputQueue.put(line);
+                }
+            } catch (IOException | InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        stdinReader.setDaemon(true);
+        stdinReader.start();
+
         try {
             connect(host, port);
             gameLoop();
@@ -58,86 +81,132 @@ public class Client {
     }
 
     private void connect(String host, int port) throws IOException {
-        socket  = new Socket(host, port);
+        socket = new Socket(host, port);
         output = new ObjectOutputStream(socket.getOutputStream());
         input = new ObjectInputStream(socket.getInputStream());
         connected = true;
 
         LOG.info("Conectado a " + host + ":" + port);
 
-        // Lanzar el hilo escucha en segundo plano
         Thread listenerThread = new Thread(new ServerListener(input, this));
-        listenerThread.setDaemon(true); // muere con el hilo principal
+        listenerThread.setDaemon(true);
         listenerThread.start();
     }
 
     private void gameLoop() {
-        Scanner scanner = new Scanner(System.in);
-
+        // Nombre del jugador — bloqueamos normalmente antes de conectar al juego
         System.out.print("Introduce tu nombre: ");
-        playerName = scanner.nextLine().trim();
+        playerName = readLineBlocking().trim();
         while (playerName.isBlank()) {
             System.out.print("El nombre no puede estar vacío. Introduce tu nombre: ");
-            playerName = scanner.nextLine().trim();
+            playerName = readLineBlocking().trim();
         }
         send(new Message(MessageType.JOIN, playerName, playerName));
 
         while (connected) {
+            stopCalled = false;
             waitingRound();
 
             if (!connected) break;
 
-            PlayerAnswers answers = getAllAnswers(scanner);
+            PlayerAnswers answers = getAllAnswers();
 
             send(new Message(MessageType.SUBMIT_ANSWERS, playerName, answers));
 
-            stopCalled = false;
-
             waitForResults();
         }
-        scanner.close();
     }
 
-    private PlayerAnswers getAllAnswers(Scanner scanner) {
+    private String readLineBlocking() {
+        try {
+            return inputQueue.take();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return "";
+        }
+    }
+
+    private String readLineInterruptible() {
+        while (true) {
+            try {
+                String line = inputQueue.poll(100, TimeUnit.MILLISECONDS);
+                if (line != null) {
+                    return line;          // el usuario escribió algo
+                }
+                if (stopCalled) {
+                    return null;          // STOP externo, no hay input pendiente
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        }
+    }
+
+    private PlayerAnswers getAllAnswers() {
         PlayerAnswers answers = new PlayerAnswers(playerName, gameLetter);
         boolean playerStop = false;
 
         for (String category : PlayerAnswers.CATEGORIES) {
 
             if (stopCalled) {
-                // Otro jugador cantó STOP mientras escribíamos
                 GameUI.printForcedStop();
                 break;
             }
 
             System.out.print(GameUI.promptCategory(category, gameLetter));
-            String linea = scanner.nextLine().trim();
 
-            if (linea.equalsIgnoreCase("STOP")) {
-                // Este jugador canta STOP
+            String line = readLineInterruptible();
+
+            if (line == null) {
+                // STOP externo llegó mientras esperábamos
+                GameUI.printForcedStop();
+                break;
+            }
+
+            line = line.trim();
+
+            // Si llegó un STOP externo justo cuando el usuario pulsaba Enter,
+            // ignoramos lo que haya escrito y paramos.
+            if (stopCalled) {
+                GameUI.printForcedStop();
+                break;
+            }
+
+            if (line.equalsIgnoreCase("STOP")) {
                 playerStop = true;
                 send(new Message(MessageType.STOP_CALLED, playerName, playerName));
                 break;
             }
 
-            answers.setAnswer(category, linea);
+            answers.setAnswer(category, line);
         }
 
-        // Si cantó STOP propio, pedir las categorías que quedaron pendientes
         if (playerStop && !stopCalled) {
-            answers = completeAnswersAfterStop(scanner, answers);
+            answers = completeAnswersAfterStop(answers);
         }
 
         return answers;
     }
 
-    private PlayerAnswers completeAnswersAfterStop(Scanner scanner, PlayerAnswers parcials) {
+    private PlayerAnswers completeAnswersAfterStop(PlayerAnswers parcials) {
         System.out.println("  Completa las respuestas que te queden:");
         for (String category : PlayerAnswers.CATEGORIES) {
             if (parcials.getAnswer(category).isBlank()) {
+
+                // Si mientras completamos el otro jugador también para, salimos
+                if (stopCalled) {
+                    break;
+                }
+
                 System.out.print(GameUI.promptCategory(category, gameLetter));
-                String line = scanner.nextLine().trim();
-                parcials.setAnswer(category, line);
+                String line = readLineInterruptible();
+
+                if (line == null || stopCalled) {
+                    break;
+                }
+
+                parcials.setAnswer(category, line.trim());
             }
         }
         return parcials;
@@ -151,7 +220,10 @@ public class Client {
     }
 
     private void waitForResults() {
-        sleepMs(3000);
+        roundResultReceived = false;
+        while (connected && !roundResultReceived) {
+            sleepMs(100);
+        }
     }
 
     private void sleepMs(long ms) {
@@ -203,6 +275,10 @@ public class Client {
 
     public void setStopCalled(boolean stopCalled) {
         this.stopCalled = stopCalled;
+    }
+
+    public void setRoundResultReceived(boolean received) {
+        this.roundResultReceived = received;
     }
 
     public void startRound(char letter) {

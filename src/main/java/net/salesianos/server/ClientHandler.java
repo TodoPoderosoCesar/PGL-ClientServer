@@ -83,6 +83,10 @@ public class ClientHandler implements Runnable {
                 finish();
                 break;
 
+            case READY_NEXT_ROUND:
+                room.playerReady();
+                break;
+
             default:
                 LOG.warning("Tipo de message inesperado del cliente: " + msg.getType());
                 send(new Message(MessageType.ERROR, "Servidor",

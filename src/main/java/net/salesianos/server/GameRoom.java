@@ -27,12 +27,14 @@ public class GameRoom {
     private int gameRound = 0;
     private Phase state = Phase.WAITING;
 
+    private int readyPlayers = 0;
+
 
     public enum Phase {
-
         FINISHED,
         IN_GAME,
         PROCESSING,
+        WAITING_READY,
         WAITING
     }
 
@@ -114,10 +116,9 @@ public class GameRoom {
         if (gameRound >= TOTAL_ROUNDS) {
             endGame();
         } else {
-            try { Thread.sleep(2000); } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            startRound();
+            state = Phase.WAITING_READY; // 🔥 CLAVE
+            readyPlayers = 0;
+            LOG.info("Esperando confirmación de jugadores...");
         }
     }
 
@@ -153,6 +154,18 @@ public class GameRoom {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
                         "No se encontró marcador para: " + name));
+    }
+
+    public synchronized void playerReady() {
+        if (state != Phase.WAITING_READY) return;
+
+        readyPlayers++;
+        LOG.info("Jugador listo (" + readyPlayers + "/" + handlers.size() + ")");
+
+        if (readyPlayers >= handlers.size()) {
+            LOG.info("Todos listos. Siguiente ronda.");
+            startRound();
+        }
     }
 
     private char randomLetter() {

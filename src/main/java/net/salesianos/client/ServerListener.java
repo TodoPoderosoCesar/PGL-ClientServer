@@ -75,13 +75,12 @@ public class ServerListener implements Runnable {
                 break;
 
             case ROUND_RESULT:
-                @SuppressWarnings("unchecked")
                 List<PlayerScore> roundScore = (List<PlayerScore>) msg.getPayload();
                 GameUI.printResults(roundScore, false);
+                cliente.setRoundResultReceived(true);
                 break;
 
             case GAME_OVER:
-                @SuppressWarnings("unchecked")
                 List<PlayerScore> marcadorFinal = (List<PlayerScore>) msg.getPayload();
                 GameUI.printGameFinished(marcadorFinal);
                 cliente.setConnected(false);
@@ -110,4 +109,3 @@ public class ServerListener implements Runnable {
         }
     }
 }
-
