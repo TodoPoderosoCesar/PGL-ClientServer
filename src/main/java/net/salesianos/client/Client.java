@@ -3,14 +3,14 @@ package net.salesianos.client;
 import net.salesianos.common.Message;
 import net.salesianos.common.MessageType;
 import net.salesianos.common.PlayerAnswers;
+import net.salesianos.utils.EncryptedObjectInputStream;
+import net.salesianos.utils.EncryptedObjectOutputStream;
+import net.salesianos.utils.SecureManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -29,8 +29,9 @@ public class Client {
     private volatile boolean roundResultReceived = false;
 
     private Socket socket;
-    private ObjectOutputStream output;
-    private ObjectInputStream input;
+
+    private EncryptedObjectOutputStream output;
+    private EncryptedObjectInputStream input;
 
     private String playerName;
 
@@ -54,8 +55,7 @@ public class Client {
     public void start(String host, int port) {
         GameUI.printWelcome();
 
-        // Hilo único que lee stdin y mete líneas en la cola.
-        // Es daemon para que no impida que la JVM cierre.
+        // Hilo único que lee stdin y mete líneas en la cola (daemon)
         Thread stdinReader = new Thread(() -> {
             try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
                 String line;
@@ -82,11 +82,16 @@ public class Client {
 
     private void connect(String host, int port) throws IOException {
         socket = new Socket(host, port);
-        output = new ObjectOutputStream(socket.getOutputStream());
-        input = new ObjectInputStream(socket.getInputStream());
-        connected = true;
 
-        LOG.info("Conectado a " + host + ":" + port);
+        // Crear SecureManager con la clave AES compartida (fichero "secret")
+        SecureManager secureManager = new SecureManager();
+
+        // Inicializar los streams cifrados
+        output = new EncryptedObjectOutputStream(socket.getOutputStream(), secureManager);
+        input  = new EncryptedObjectInputStream(socket.getInputStream(), secureManager);
+
+        connected = true;
+        LOG.info("Conectado (cifrado AES) a " + host + ":" + port);
 
         Thread listenerThread = new Thread(new ServerListener(input, this));
         listenerThread.setDaemon(true);
@@ -94,7 +99,6 @@ public class Client {
     }
 
     private void gameLoop() {
-        // Nombre del jugador — bloqueamos normalmente antes de conectar al juego
         System.out.print("Introduce tu nombre: ");
         playerName = readLineBlocking().trim();
         while (playerName.isBlank()) {
@@ -131,10 +135,10 @@ public class Client {
             try {
                 String line = inputQueue.poll(100, TimeUnit.MILLISECONDS);
                 if (line != null) {
-                    return line;          // el usuario escribió algo
+                    return line;
                 }
                 if (stopCalled) {
-                    return null;          // STOP externo, no hay input pendiente
+                    return null;
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -159,15 +163,12 @@ public class Client {
             String line = readLineInterruptible();
 
             if (line == null) {
-                // STOP externo llegó mientras esperábamos
                 GameUI.printForcedStop();
                 break;
             }
 
             line = line.trim();
 
-            // Si llegó un STOP externo justo cuando el usuario pulsaba Enter,
-            // ignoramos lo que haya escrito y paramos.
             if (stopCalled) {
                 GameUI.printForcedStop();
                 break;
@@ -194,7 +195,6 @@ public class Client {
         for (String category : PlayerAnswers.CATEGORIES) {
             if (parcials.getAnswer(category).isBlank()) {
 
-                // Si mientras completamos el otro jugador también para, salimos
                 if (stopCalled) {
                     break;
                 }
@@ -238,8 +238,6 @@ public class Client {
         if (!connected || output == null) return;
         try {
             output.writeObject(msg);
-            output.flush();
-            output.reset();
         } catch (IOException e) {
             LOG.log(Level.WARNING, "Error al enviar mensaje al servidor", e);
             connected = false;
@@ -261,27 +259,10 @@ public class Client {
         LOG.info("Cliente cerrado.");
     }
 
-    public String getPlayerName() {
-        return playerName;
-    }
-
-    public boolean isConnected() {
-        return connected;
-    }
-
-    public void setConnected(boolean connected) {
-        this.connected = connected;
-    }
-
-    public void setStopCalled(boolean stopCalled) {
-        this.stopCalled = stopCalled;
-    }
-
-    public void setRoundResultReceived(boolean received) {
-        this.roundResultReceived = received;
-    }
-
-    public void startRound(char letter) {
-        this.gameLetter = letter;
-    }
+    public String getPlayerName()                    { return playerName; }
+    public boolean isConnected()                     { return connected; }
+    public void setConnected(boolean connected)      { this.connected = connected; }
+    public void setStopCalled(boolean stopCalled)    { this.stopCalled = stopCalled; }
+    public void setRoundResultReceived(boolean recv) { this.roundResultReceived = recv; }
+    public void startRound(char letter)              { this.gameLetter = letter; }
 }
