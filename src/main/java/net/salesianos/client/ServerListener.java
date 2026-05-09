@@ -3,10 +3,10 @@ package net.salesianos.client;
 import net.salesianos.common.Message;
 import net.salesianos.common.MessageType;
 import net.salesianos.common.PlayerScore;
+import net.salesianos.utils.EncryptedObjectInputStream;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.net.SocketException;
 import java.util.List;
 import java.util.logging.Level;
@@ -16,12 +16,13 @@ public class ServerListener implements Runnable {
 
     private static final Logger LOG = Logger.getLogger(ServerListener.class.getName());
 
-    private final ObjectInputStream input;
+    // Ahora recibe un EncryptedObjectInputStream en lugar del ObjectInputStream original
+    private final EncryptedObjectInputStream input;
     private final Client cliente;
 
-    public ServerListener(ObjectInputStream input, Client client) {
-        this.input = input;
-        this.cliente  = client;
+    public ServerListener(EncryptedObjectInputStream input, Client client) {
+        this.input   = input;
+        this.cliente = client;
     }
 
     @Override
@@ -52,7 +53,7 @@ public class ServerListener implements Runnable {
     }
 
     private void handleMessage(Message msg) {
-        LOG.fine("Recibido del servidor: " + msg);
+        LOG.fine("Recibido del servidor (descifrado): " + msg);
 
         switch (msg.getType()) {
 
