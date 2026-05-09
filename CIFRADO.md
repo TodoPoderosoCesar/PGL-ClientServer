@@ -62,3 +62,11 @@ Implementación sugerida:
 - Añadir campo `role` al `Message` de tipo `JOIN`.
 - `GameRoom` comprueba el rol antes de ejecutar `handleStop`, `removePlayer`, etc.
 - Clave AES diferente por sala para aislar partidas entre sí.
+
+## Capturas
+
+### Captura de un paquete del Wireshark de esta aplicación antes del cifrado:
+![Captura 1](./img/SinEncriptarPrueba.png)
+
+### Captura de un paquete del Wireshark de esta aplicación después del cifrado:
+![Captura 2](./img/encriptado.png)
