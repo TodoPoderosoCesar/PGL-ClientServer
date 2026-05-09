@@ -3,11 +3,12 @@ package net.salesianos.server;
 import net.salesianos.common.Message;
 import net.salesianos.common.MessageType;
 import net.salesianos.common.PlayerAnswers;
+import net.salesianos.utils.EncryptedObjectInputStream;
+import net.salesianos.utils.EncryptedObjectOutputStream;
+import net.salesianos.utils.SecureManager;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.logging.Level;
@@ -19,8 +20,11 @@ public class ClientHandler implements Runnable {
     private static final Logger LOG = Logger.getLogger(ClientHandler.class.getName());
     private final Socket socket;
     private final GameRoom room;
-    private ObjectOutputStream output;
-    private ObjectInputStream input;
+
+    // Streams cifrados en lugar de los ObjectOutputStream/ObjectInputStream originales
+    private EncryptedObjectOutputStream output;
+    private EncryptedObjectInputStream input;
+
     private String playerName;
 
     public ClientHandler(Socket socket, GameRoom room) {
@@ -31,10 +35,14 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
-            output = new ObjectOutputStream(socket.getOutputStream());
-            input = new ObjectInputStream(socket.getInputStream());
+            // Crear SecureManager (lee la clave AES del fichero "secret")
+            SecureManager secureManager = new SecureManager();
 
-            LOG.info("Nueva conexión desde " + socket.getRemoteSocketAddress());
+            // Inicializar los streams cifrados
+            output = new EncryptedObjectOutputStream(socket.getOutputStream(), secureManager);
+            input  = new EncryptedObjectInputStream(socket.getInputStream(), secureManager);
+
+            LOG.info("Nueva conexión cifrada desde " + socket.getRemoteSocketAddress());
 
             listeningLoop();
 
@@ -124,8 +132,6 @@ public class ClientHandler implements Runnable {
         }
         try {
             output.writeObject(message);
-            output.flush();
-            output.reset();
         } catch (IOException e) {
             LOG.log(Level.WARNING, "No se pudo enviar message a " + playerNameOSocket(), e);
         }
@@ -154,4 +160,3 @@ public class ClientHandler implements Runnable {
         return playerName;
     }
 }
-
